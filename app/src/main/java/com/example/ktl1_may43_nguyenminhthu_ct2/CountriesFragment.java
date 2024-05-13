@@ -1,22 +1,28 @@
 package com.example.ktl1_may43_nguyenminhthu_ct2;
 
+import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.example.ktl1_may43_nguyenminhthu_ct2.CustomedAdapters.CustomAdapterCountryListView;
 import com.example.ktl1_may43_nguyenminhthu_ct2.Models.Country;
 import com.example.ktl1_may43_nguyenminhthu_ct2.Models.World;
 import com.example.ktl1_may43_nguyenminhthu_ct2.databinding.FragmentCountriesBinding;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -89,15 +95,22 @@ public class CountriesFragment extends Fragment {
 
     private ArrayList<World> list;
     private ArrayList<String> listContinents = new ArrayList<>();
+    private ArrayList<Country> currentCountries = new ArrayList<>();
     private String currentContinent = "";
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        init();
+        addEvents();
+    }
+    private void init(){
         list = getDataFromJSON();
 
         ArrayAdapter<String> adapterContinents = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_dropdown_item, listContinents);
         fragmentCountriesBinding.spinnerContinents.setAdapter(adapterContinents);
+    }
+    private void addEvents(){
         fragmentCountriesBinding.spinnerContinents.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -110,7 +123,7 @@ public class CountriesFragment extends Fragment {
                         break;
                     }
                 }
-
+                currentCountries = countries;
                 if (countries != null) {
                     CustomAdapterCountryListView adapterCountryListView = new CustomAdapterCountryListView(getContext(), R.layout.custom_country_in_listview, countries);
                     fragmentCountriesBinding.listViewItems.setAdapter(adapterCountryListView);
@@ -145,7 +158,8 @@ public class CountriesFragment extends Fragment {
                                 break;
                             }
                         }
-                        if(countriesSearch != null || countriesSearch.isEmpty()){
+                        if(countriesSearch != null || !countriesSearch.isEmpty()){
+                            currentCountries = countriesSearch;
                             CustomAdapterCountryListView adapterCountryListView = new CustomAdapterCountryListView(getContext(), R.layout.custom_country_in_listview, countriesSearch);
                             fragmentCountriesBinding.listViewItems.setAdapter(adapterCountryListView);
                         }
@@ -157,8 +171,49 @@ public class CountriesFragment extends Fragment {
                     }
                 }
                 else {
-                    fragmentCountriesBinding.editTextSearch.setHint("Please type name");
+                    ArrayList<Country> countries = null;
+                    for (World world : list) {
+                        if (world.getContinentName().equals(currentContinent)) {
+                            countries = world.getCountries();
+                            break;
+                        }
+                    }
+                    currentCountries = countries;
+
+                    if (countries != null) {
+                        CustomAdapterCountryListView adapterCountryListView = new CustomAdapterCountryListView(getContext(), R.layout.custom_country_in_listview, countries);
+                        fragmentCountriesBinding.listViewItems.setAdapter(adapterCountryListView);
+                    } else {
+                        Toast.makeText(getContext(), "No countries found for " + currentContinent, Toast.LENGTH_LONG).show();
+                    }
                 }
+            }
+        });
+        fragmentCountriesBinding.buttonRestore.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                init();
+            }
+        });
+        fragmentCountriesBinding.listViewItems.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Country item = currentCountries.get(position);
+                Intent intent = new Intent(getContext(), DetailCountry.class);
+                intent.putExtra("Country", item.getCountry());
+                intent.putExtra("Area", item.getArea());
+                intent.putExtra("Population", item.getPopulation());
+                intent.putExtra("Capital", item.getCapital());
+                intent.putExtra("imageURL", item.getImageURL());
+                getContext().startActivity(intent);
+            }
+        });
+        fragmentCountriesBinding.listViewItems.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                Country item = currentCountries.get(position);
+                showDeleteDialog(item);
+                return false;
             }
         });
     }
@@ -204,5 +259,41 @@ public class CountriesFragment extends Fragment {
             e.printStackTrace();
         }
         return list;
+    }
+    private void showDeleteDialog(Country country) {
+        BottomSheetDialog dialog = new BottomSheetDialog(getContext());
+        View view = LayoutInflater.from(getContext()).inflate(R.layout.delete_options_bottom_sheet_dialog_layout, null);
+        dialog.setContentView(view);
+
+        LinearLayout layoutYes = dialog.findViewById(R.id.layoutYes);
+        LinearLayout layoutNo = dialog.findViewById(R.id.layoutNo);
+        layoutYes.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                for (World world : list) {
+                    if (world.getContinentName().equals(country.getCountry())) {
+                        world.getCountries().remove(country);
+                        break;
+                    }
+                }
+                currentCountries.remove(country);
+                CustomAdapterCountryListView adapterCountryListView = new CustomAdapterCountryListView(getContext(), R.layout.custom_country_in_listview, currentCountries);
+                fragmentCountriesBinding.listViewItems.setAdapter(adapterCountryListView);
+                dialog.dismiss();
+            }
+        });
+        layoutNo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                dialog.dismiss();
+
+            }
+        });
+        dialog.show();
+        dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT);
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        dialog.getWindow().getAttributes().windowAnimations = R.style.DialogAnimation;
+        dialog.getWindow().setGravity(Gravity.BOTTOM);
     }
 }
