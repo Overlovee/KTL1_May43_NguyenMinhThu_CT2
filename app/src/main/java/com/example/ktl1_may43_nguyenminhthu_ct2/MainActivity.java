@@ -29,13 +29,8 @@ public class MainActivity extends AppCompatActivity {
                 int id = item.getItemId();
                 if (id == R.id.navigation_countries) {
                     fragment = new CountriesFragment();
-                    activityMainBinding.textViewFragmentTitle.setVisibility(View.GONE);
-                    activityMainBinding.searchBar.setVisibility(View.VISIBLE);
-                    activityMainBinding.searchBar.setIconifiedByDefault(false);
                 }
                 else {
-                    activityMainBinding.textViewFragmentTitle.setVisibility(View.VISIBLE);
-                    activityMainBinding.searchBar.setVisibility(View.GONE);
                     if (id == R.id.navigation_home) {
                         fragment = new HomeFragment();
                     } else if (id == R.id.navigation_countries) {
@@ -52,7 +47,6 @@ public class MainActivity extends AppCompatActivity {
         });
         activityMainBinding.bottomNavigationMain.setSelectedItemId(R.id.navigation_home);
         loadFragment(new HomeFragment());
-        AddEvents();
     }
     public void loadFragment(Fragment fragment)
     {
@@ -60,31 +54,6 @@ public class MainActivity extends AppCompatActivity {
         transaction.replace(activityMainBinding.frameFragment.getId(), fragment);
         transaction.addToBackStack(null);
         transaction.commit();
-    }
-    void AddEvents(){
-        activityMainBinding.searchBar.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                activityMainBinding.searchBar.setIconifiedByDefault(false);
-            }
-        });
-        activityMainBinding.searchBar.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            @Override
-            public boolean onQueryTextSubmit(String query) {
-                performSearch(query);
-                activityMainBinding.searchBar.clearFocus();
-                return false;
-            }
-
-            @Override
-            public boolean onQueryTextChange(String newText) {
-                if (newText.isEmpty()) {
-                    performSearch("");
-                }
-                return false;
-            }
-
-        });
     }
     @Override
     protected void onDestroy() {
